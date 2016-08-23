@@ -10,17 +10,28 @@ end
 # Query parameters:
 # - source_graph: The graph to copy contents from
 # - target_graph: The graph to copy contents to
-post '/copy/' do
+post '/copy/:task_uuid' do
   content_type 'application/json'
+
+  if ENV['COPY_CHECK']
+    unless query ENV['COPY_CHECK'].gsub('COPY_TASK_UUID', params['task_uuid'].sparql_escape)
+      error "Graph copy checks did not pass."
+    end
+  end
 
   update <<SPARQL
     INSERT {
-      GRAPH <#{params["target_graph"]}> {
+      GRAPH ?targetGraph {
         ?s ?p ?o.
       }
     }
     WHERE {
-      GRAPH <#{params["source_graph"]}> {
+      GRAPH <http://mu.semte.ch/application> {
+        ?graphObject <http://mu.semte.ch/vocabularies/core/uuid> #{params['task_uuid'].sparql_escape};
+           <http://mu.semte.ch/vocabularies/core/source_graph> ?sourceGraph;
+           <http://mu.semte.ch/vocabularies/core/target_graph> ?targetGraph.
+      }
+      GRAPH ?sourceGraph {
         ?s ?p ?o.
       }
     }
